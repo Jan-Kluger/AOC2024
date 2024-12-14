@@ -2,7 +2,7 @@ module IntMap = Map.Make(Int)
 
 module Solution : sig
 
-val calc : cond_filepath:string -> list_filepath:string -> (int * int) list
+val calc : cond_filepath:string -> list_filepath:string -> int
 
 end = struct
 
@@ -27,25 +27,53 @@ end = struct
       let conds = print_lines [] in
       List.fold_left (fun acc (l,r) -> IntMap.add l r acc) counter conds
 
-  let get_list_input (filepath : string) = 
+  let get_list_input (filepath : string) : int list list = 
     let chl = open_in filepath in
     let rec glines acc =
       try
         let line = input_line chl in
-        String.split_on_char ',' line
+        let elements = List.map (fun s -> int_of_string s) (String.split_on_char ',' line) in
+        glines (elements :: acc)
       with End_of_file ->
         close_in chl;
-        []
+        acc
       in
-      glines filepath
+      glines []
+
+  let check_list (list : int list) (conds : 'a IntMap.t) : int =
+    let to_return = List.nth list ((List.length list)/2) in
+    let rec chelper elements inserted =
+      match elements with
+      | x :: xs -> (
+        let succ = IntMap.find_opt x inserted in
+        match succ with
+        | Some _ -> 0
+        | None -> 
+          let newmap = IntMap.add x 1 inserted in
+          chelper xs newmap
+      )
+      | [] -> to_return
+    in
+    chelper list IntMap.empty
 
   let calc ~(cond_filepath : string) ~(list_filepath : string) = 
-    let wut = get_cond_input cond_filepath in
-    let wat = get_list_input list_filepath in
-    List.rev (IntMap.bindings wut)
+    let conds = get_cond_input cond_filepath in
+    let list_i = get_list_input list_filepath in
+    let rec check_valid es res = 
+      match es with
+      | x :: xs -> (
+        check_valid xs res + (check_list x conds)
+      )
+      | [] -> res
+    in
+    check_valid list_i 1
+
 end
 
+let cf = "/Users/yannick/Documents/TUM/Orga/kram/c_leet/AOC2024/day5/conds.txt"
+let lf = "/Users/yannick/Documents/TUM/Orga/kram/c_leet/AOC2024/day5/input.txt"
+
 let res =
-  Solution.calc ~cond_filepath:"/Users/yannick/Documents/TUM/Orga/kram/c_leet/AOC2024/day5/conds.txt" ~list_filepath:"/Users/yannick/Documents/TUM/Orga/kram/c_leet/AOC2024/day5/input.txt"
+  Solution.calc ~cond_filepath:cf ~list_filepath:lf
 
 
